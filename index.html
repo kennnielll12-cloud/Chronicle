@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CHRONICLES</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#08090f"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Chronicles"/>
+<link rel="apple-touch-icon" href="icon.png"/>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#08090f;--surface:#0d1018;--surface2:#12161f;--border:#1a2235;
+  --gold:#c8952a;--gold-dim:rgba(200,149,42,0.12);
+  --blue:#4a8fff;--text:#bfc8d8;--text-dim:#4a5568;--text-bright:#e8edf5;
+  --danger:#e53e3e;--mono:'Space Mono',monospace;--serif:'IM Fell English',serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;height:100dvh;display:flex;overflow:hidden}
+
+/* SIDEBAR */
+#sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:50;transition:transform .25s}
+#sidebar-logo{padding:20px 16px 12px;border-bottom:1px solid var(--border)}
+#sidebar-logo .big{font-family:var(--serif);font-size:22px;color:var(--gold);text-shadow:0 0 20px rgba(200,149,42,.4);letter-spacing:.08em}
+#sidebar-logo .small{font-size:9px;letter-spacing:.25em;color:var(--text-dim);text-transform:uppercase;margin-top:2px}
+#new-btn{margin:12px;background:var(--gold-dim);border:1px solid var(--gold);color:var(--gold);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:10px;border-radius:5px;cursor:pointer;width:calc(100% - 24px);transition:all .15s}
+#new-btn:hover{background:var(--gold);color:#08090f}
+#api-btn{margin:0 12px 12px;background:transparent;border:1px solid var(--border);color:var(--text-dim);font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:7px;border-radius:5px;cursor:pointer;width:calc(100% - 24px);transition:all .15s}
+#api-btn:hover{border-color:var(--blue);color:var(--blue)}
+#chronicles-label{font-size:9px;letter-spacing:.2em;color:var(--text-dim);text-transform:uppercase;padding:0 16px 8px}
+#chronicles-list{flex:1;overflow-y:auto;padding:0 8px 12px}
+#chronicles-list::-webkit-scrollbar{width:3px}
+#chronicles-list::-webkit-scrollbar-thumb{background:var(--border)}
+.chronicle-item{padding:10px 12px;border-radius:5px;cursor:pointer;border:1px solid transparent;margin-bottom:4px;transition:all .15s}
+.chronicle-item:hover{background:var(--surface2);border-color:var(--border)}
+.chronicle-item.active{background:var(--gold-dim);border-color:rgba(200,149,42,.3)}
+.ci-name{font-size:12px;color:var(--text-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chronicle-item.active .ci-name{color:var(--gold)}
+.ci-meta{font-size:10px;color:var(--text-dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:9px;color:var(--text-dim);line-height:2;letter-spacing:.05em}
+
+/* MAIN */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#topbar{display:flex;align-items:center;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);gap:12px;flex-shrink:0}
+#menu-btn{display:none;background:none;border:1px solid var(--border);color:var(--text-dim);width:32px;height:32px;border-radius:4px;cursor:pointer;font-size:16px;align-items:center;justify-content:center;flex-shrink:0}
+#topbar-title{font-family:var(--serif);font-size:17px;color:var(--gold);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#topbar-genre{font-size:10px;color:var(--text-dim);letter-spacing:.1em;white-space:nowrap}
+#delete-btn{background:none;border:1px solid transparent;color:var(--text-dim);width:30px;height:30px;border-radius:4px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+#delete-btn:hover{border-color:var(--danger);color:var(--danger)}
+#delete-btn:disabled{opacity:.3;pointer-events:none}
+
+/* CONTENT */
+#content-row{flex:1;display:flex;overflow:hidden}
+#chat-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+#messages::-webkit-scrollbar{width:4px}
+#messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+.bubble{border-radius:7px;padding:14px 18px;animation:fadeUp .2s ease;line-height:1.8}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.bubble-label{font-size:9px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px;opacity:.6}
+.bubble.narrator{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);font-family:var(--serif);font-size:16px;color:var(--text-bright)}
+.bubble.narrator .bubble-label{color:var(--gold)}
+.bubble.player{background:#05101e;border:1px solid #1a3050;border-right:3px solid var(--blue);align-self:flex-end;max-width:85%;font-size:12px;color:#7eb3ff}
+.bubble.player .bubble-label{color:var(--blue)}
+.bubble.system{text-align:center;background:transparent;border:none;font-size:10px;color:var(--text-dim);letter-spacing:.15em;padding:4px}
+
+#status-bar{height:24px;padding:0 16px;display:flex;align-items:center;gap:10px;font-size:10px;color:var(--blue);letter-spacing:.1em;opacity:0;transition:opacity .2s;flex-shrink:0}
+#status-bar.show{opacity:1}
+#status-dot{width:6px;height:6px;border-radius:50%;background:var(--blue);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
+
+#input-area{padding:12px 16px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:10px;align-items:flex-end;flex-shrink:0}
+#msg-input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text-bright);font-family:var(--mono);font-size:13px;padding:10px 14px;border-radius:6px;outline:none;resize:none;max-height:100px;min-height:42px;line-height:1.5;transition:border-color .15s}
+#msg-input:focus{border-color:var(--gold)}
+#msg-input::placeholder{color:var(--text-dim)}
+#send-btn{background:var(--gold);border:none;color:#08090f;width:42px;height:42px;border-radius:6px;cursor:pointer;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+#send-btn:hover{filter:brightness(1.15);transform:scale(1.04)}
+#send-btn:disabled{background:var(--surface2);color:var(--text-dim);transform:none;cursor:not-allowed}
+
+/* WORLD PANEL */
+#world-panel{width:265px;min-width:265px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+#world-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.world-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px rgba(200,149,42,.6);flex-shrink:0}
+#world-header span{font-size:10px;letter-spacing:.2em;color:var(--text-dim);text-transform:uppercase}
+#world-body{flex:1;overflow-y:auto;padding:12px 14px;display:none;flex-direction:column;gap:14px}
+#world-body::-webkit-scrollbar{width:3px}
+#world-body::-webkit-scrollbar-thumb{background:var(--border)}
+.ws-label{font-size:9px;letter-spacing:.2em;color:var(--blue);text-transform:uppercase;margin-bottom:4px}
+.ws-value{font-size:13px;color:var(--text-bright)}
+.ws-value.gold{color:var(--gold)}
+.ws-sub{font-size:11px;color:var(--text-dim);font-style:italic;margin-top:2px;line-height:1.5}
+.hp-bar-bg{background:var(--surface2);border-radius:3px;height:5px;margin-top:5px;overflow:hidden}
+.hp-bar-fill{height:100%;border-radius:3px;transition:width .4s,background .4s}
+.inv-tag{display:inline-block;background:rgba(200,149,42,.1);border:1px solid rgba(200,149,42,.25);border-radius:3px;padding:2px 8px;font-size:10px;color:var(--gold);margin:2px 2px 2px 0}
+.quest-item{font-size:11px;color:var(--text);margin-bottom:3px;line-height:1.5}
+.flag-row{display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px}
+.flag-key{color:var(--text-dim)}
+.flag-val{color:var(--blue)}
+.flag-val.off{color:var(--border)}
+.divider{height:1px;background:var(--border);flex-shrink:0}
+#world-empty{flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-dim);text-align:center;padding:20px;line-height:2;letter-spacing:.1em}
+
+/* MODALS */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-bg.hidden{display:none}
+.modal{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:24px;width:100%;max-width:480px;max-height:90dvh;overflow-y:auto}
+.modal h2{font-family:var(--serif);font-size:20px;color:var(--gold);margin-bottom:16px}
+.modal label{display:block;font-size:10px;letter-spacing:.15em;color:var(--text-dim);text-transform:uppercase;margin-bottom:5px;margin-top:14px}
+.modal input,.modal textarea,.modal select{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text-bright);font-family:var(--mono);font-size:12px;padding:9px 12px;border-radius:5px;outline:none;transition:border-color .15s}
+.modal input:focus,.modal textarea:focus,.modal select:focus{border-color:var(--gold)}
+.modal select option{background:var(--surface)}
+.modal textarea{resize:vertical;min-height:70px}
+.modal-note{font-size:10px;color:var(--text-dim);margin-top:5px;line-height:1.6}
+.modal-note a{color:var(--gold);text-decoration:none}
+.modal-btns{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+.btn-cancel{background:transparent;border:1px solid var(--border);color:var(--text-dim);font-family:var(--mono);font-size:12px;padding:9px 18px;border-radius:5px;cursor:pointer;transition:all .15s}
+.btn-cancel:hover{border-color:var(--text-dim);color:var(--text)}
+.btn-confirm{background:var(--gold);border:none;color:#08090f;font-family:var(--mono);font-size:12px;font-weight:700;padding:9px 18px;border-radius:5px;cursor:pointer;letter-spacing:.06em;transition:all .15s}
+.btn-confirm:hover{filter:brightness(1.1)}
+.btn-danger{background:var(--danger) !important}
+
+/* EMPTY STATE */
+#empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--text-dim)}
+.es-title{font-family:var(--serif);font-size:36px;color:var(--gold);text-shadow:0 0 30px rgba(200,149,42,.3);letter-spacing:.1em}
+
+/* MOBILE */
+@media(max-width:700px){
+  #sidebar{position:fixed;top:0;left:0;bottom:0;transform:translateX(-100%)}
+  #sidebar.open{transform:translateX(0);box-shadow:4px 0 20px rgba(0,0,0,.5)}
+  #menu-btn{display:flex}
+  #world-panel{display:none}
+}
+@media(max-width:900px){#world-panel{width:220px;min-width:220px}}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div id="sidebar-logo">
+    <div class="big">Chronicles</div>
+    <div class="small">Hybrid AI Story Engine</div>
+  </div>
+  <button id="new-btn" onclick="openNewModal()">⚔ New Chronicle</button>
+  <button id="api-btn" onclick="openApiModal()">⚙ API Keys</button>
+  <div id="chronicles-label">Saved Chronicles</div>
+  <div id="chronicles-list"></div>
+  <div id="sidebar-footer">
+    🧠 Gemini 2.0 Flash · Memory<br>
+    ✍ NVIDIA Nemotron 49B · Narrator<br>
+    🔍 DuckDuckGo · Web Search
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <button id="menu-btn" onclick="toggleSidebar()">☰</button>
+    <div id="topbar-title">Select or create a Chronicle</div>
+    <div id="topbar-genre"></div>
+    <button id="delete-btn" disabled onclick="confirmDelete()" title="Delete chronicle">🗑</button>
+  </div>
+
+  <div id="content-row">
+    <div id="chat-panel">
+      <div id="messages">
+        <div id="empty-state">
+          <div class="es-title">Chronicles</div>
+          <p style="font-size:11px;letter-spacing:.15em;text-align:center;line-height:2">ANY STORY. ANY WORLD.<br>INFINITE MEMORY.</p>
+          <p style="font-size:11px;opacity:.4">← Create a new chronicle to begin</p>
+        </div>
+      </div>
+
+      <div id="status-bar"><div id="status-dot"></div><span id="status-text"></span></div>
+
+      <div id="input-area">
+        <textarea id="msg-input" rows="1" placeholder="What do you do?" disabled></textarea>
+        <button id="send-btn" disabled onclick="sendMessage()">↑</button>
+      </div>
+    </div>
+
+    <div id="world-panel">
+      <div id="world-header"><div class="world-dot"></div><span>World State</span></div>
+      <div id="world-empty">Start a chronicle<br>to see live stats</div>
+      <div id="world-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div id="api-modal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>⚙ API Keys</h2>
+    <label>Gemini API Key</label>
+    <input id="gemini-key-input" type="password" placeholder="AIza..."/>
+    <p class="modal-note">Free — <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> → Create API Key</p>
+    <label>NVIDIA NIM API Key</label>
+    <input id="nvidia-key-input" type="password" placeholder="nvapi-..."/>
+    <p class="modal-note">Free — <a href="https://build.nvidia.com" target="_blank">build.nvidia.com</a> → Sign up → Get API Key</p>
+    <p class="modal-note" style="margin-top:12px">🔍 Web search is DuckDuckGo — free, no key needed.</p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('api-modal')">Cancel</button>
+      <button class="btn-confirm" onclick="saveApiKeys()">Save Keys</button>
+    </div>
+  </div>
+</div>
+
+<div id="new-modal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>⚔ New Chronicle</h2>
+    <label>Story Name</label>
+    <input id="nc-name" type="text" placeholder="e.g. The Vampire Courts of Prague"/>
+    <label>Genre</label>
+    <select id="nc-genre">
+      <option>Dark Fantasy</option>
+      <option>Space Opera / Sci-Fi</option>
+      <option>Horror / Lovecraftian</option>
+      <option>Historical — Medieval</option>
+      <option>Historical — Ancient Rome</option>
+      <option>Historical — WW2</option>
+      <option>Modern Thriller</option>
+      <option>Cyberpunk</option>
+      <option>Post-Apocalyptic</option>
+      <option>Slice of Life / Drama</option>
+      <option>Pirate Adventure</option>
+      <option>Mythology</option>
+      <option>Custom / Freeform</option>
+    </select>
+    <label>Custom Setting <span style="opacity:.5;font-style:italic;text-transform:none">(optional)</span></label>
+    <textarea id="nc-setting" placeholder="e.g. 1920s Paris, secret underground magic society, art deco..."></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('new-modal')">Cancel</button>
+      <button class="btn-confirm" onclick="createChronicle()">Begin Story →</button>
+    </div>
+  </div>
+</div>
+
+<div id="delete-modal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>Delete Chronicle?</h2>
+    <p id="delete-text" style="color:var(--text);font-size:13px;margin:8px 0 0;line-height:1.7"></p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('delete-modal')">Keep It</button>
+      <button class="btn-confirm btn-danger" onclick="deleteChronicle()">Delete Forever</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════ DB ═══════════════════════════
+const DB_NAME='chronicles-v2',DB_VER=1;let db;
+function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,DB_VER);r.onupgradeneeded=e=>{if(!e.target.result.objectStoreNames.contains('c'))e.target.result.createObjectStore('c',{keyPath:'id'})};r.onsuccess=e=>{db=e.target.result;res()};r.onerror=()=>rej(r.error)})}
+const st=rw=>db.transaction('c',rw).objectStore('c');
+const dbGet=id=>new Promise((res,rej)=>{const r=st('readonly').get(id);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const dbPut=v=>new Promise((res,rej)=>{const r=st('readwrite').put(v);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)});
+const dbDel=id=>new Promise((res,rej)=>{const r=st('readwrite').delete(id);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)});
+const dbAll=()=>new Promise((res,rej)=>{const r=st('readonly').getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+
+// ═══════════════════════════ KEYS ══════════════════════════
+const gk=k=>localStorage.getItem('chr_'+k)||'';
+const sk=(k,v)=>localStorage.setItem('chr_'+k,v);
+
+// ═══════════════════════════ STATE ═════════════════════════
+let activeId=null,activeChronicle=null,busy=false;
+
+// ══════════════════════════ GENRES ═════════════════════════
+const FLAVOR={
+  'Dark Fantasy':'dark gritty fantasy with morally complex choices and ancient evils',
+  'Space Opera / Sci-Fi':'epic science fiction with vast star systems and civilizations at stake',
+  'Horror / Lovecraftian':'slow-burn cosmic horror where sanity erodes and the universe is indifferent',
+  'Historical — Medieval':'grounded medieval fiction with period-accurate details, intrigue, and realism',
+  'Historical — Ancient Rome':'the grandeur and brutality of Ancient Rome — senators, gladiators, legions',
+  'Historical — WW2':'the desperate reality of World War II — mud, steel, propaganda, human courage',
+  'Modern Thriller':'tense modern thriller with realistic stakes and conspiracies hiding in plain sight',
+  'Cyberpunk':'neon-drenched near-future cyberpunk where corps own everything and hackers survive',
+  'Post-Apocalyptic':'brutal post-collapse world — scarce resources, desperate factions, beauty in ruins',
+  'Slice of Life / Drama':'intimate emotionally resonant human drama where small moments carry great weight',
+  'Pirate Adventure':'swashbuckling high-seas adventure of betrayal, treasure, and open water freedom',
+  'Mythology':'timeless world of gods, heroes, and monsters where fate is written but not always obeyed',
+  'Custom / Freeform':'a world defined entirely by the player — any tone, any universe, anything possible',
+};
+
+// ══════════════════════════ PROMPTS ════════════════════════
+const GEMINI_SYS=`You are the Memory Engine for an interactive story. Your ONLY output is raw JSON — no markdown, no explanation.
+Rules: Update all values from the player's latest action. health=integer 0-100. inventory=string[]. quest_log=string[] prefixed "Active:"/"Completed:"/"Failed:". flags=key→value. notes=hidden narrator context (max 200 chars). Be consistent with all prior history.
+Output ONLY this schema:
+{"location":"","location_description":"","health":100,"max_health":100,"gold":0,"inventory":[],"quest_log":[],"flags":{},"last_action_summary":"","notes":""}`;
+
+function narratorSys(genre,setting){
+  const f=FLAVOR[genre]||genre;
+  const s=setting?`\nCustom setting: ${setting}`:'';
+  return `You are the Narrator of ${f}.${s}
+Rules:
+1. EXACTLY 3 paragraphs. No more, no less.
+2. NEVER break character. Never mention AI, JSON, APIs, or any tech.
+3. Write in second person ("You see...", "You feel...").
+4. Para 1: Scene/environment. Para 2: Consequences of player's action. Para 3: Atmosphere or narrative hook — never a direct question.
+5. Weave inventory, health, location naturally into prose when relevant.
+6. If WEB SEARCH RESULTS are provided, weave real facts naturally — never cite sources.
+7. Match emotional register: death is heavy, wonder is luminous, danger is taut.
+8. Each paragraph: 3-5 rich sentences. Make every word earn its place.`;
+}
+
+// ═══════════════════════ WEB SEARCH ════════════════════════
+const GENRE_SEARCH={'Historical — Medieval':'medieval history','Historical — Ancient Rome':'ancient Rome','Historical — WW2':'World War 2','Horror / Lovecraftian':'cosmic horror mythology','Space Opera / Sci-Fi':'space astronomy science','Cyberpunk':'cyberpunk hacking technology','Mythology':'mythology folklore legends','Pirate Adventure':'pirates 17th century naval history'};
+
+async function webSearch(genre,action,ws){
+  try{
+    const base=GENRE_SEARCH[genre]||'';
+    const words=action.split(/\s+/).filter(w=>w.length>4).slice(0,3).join(' ');
+    const q=encodeURIComponent(`${base} ${words}`.trim().slice(0,80));
+    const r=await fetch(`https://api.duckduckgo.com/?q=${q}&format=json&no_redirect=1&skip_disambig=1`,{signal:AbortSignal.timeout(4000)});
+    const d=await r.json();
+    const bits=[];
+    if(d.AbstractText) bits.push(d.AbstractText.slice(0,350));
+    (d.RelatedTopics||[]).slice(0,3).forEach(t=>{if(t.Text)bits.push(t.Text.slice(0,200))});
+    return bits.join('\n');
+  }catch{return''}
+}
+
+// ══════════════════════ GEMINI CALL ════════════════════════
+async function callGemini(chronicle,action){
+  const key=gk('gemini');
+  if(!key)throw new Error('Gemini API key missing — click ⚙ API Keys');
+  let hist='=== FULL STORY HISTORY ===\n\n';
+  for(const m of chronicle.messages)hist+=`[${m.role.toUpperCase()}]: ${m.content}\n\n`;
+  const prompt=`${hist}=== CURRENT WORLD STATE ===\n${JSON.stringify(chronicle.worldState)}\n\n=== PLAYER ACTION ===\n${action}\n\nOutput updated World State JSON:`;
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
+  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:GEMINI_SYS}]},contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.1,maxOutputTokens:1024}})});
+  if(!r.ok){const e=await r.json();throw new Error(e.error?.message||`Gemini error ${r.status}`)}
+  const d=await r.json();
+  let raw=d.candidates?.[0]?.content?.parts?.[0]?.text||'{}';
+  raw=raw.replace(/```json/g,'').replace(/```/g,'').trim();
+  return JSON.parse(raw);
+}
+
+// ══════════════════════ NVIDIA CALL ════════════════════════
+async function callNvidia(chronicle,ws,action,search,onChunk){
+  const key=gk('nvidia');
+  if(!key)throw new Error('NVIDIA API key missing — click ⚙ API Keys');
+  const recent=chronicle.messages.slice(-8).map(m=>m.role==='narrator'?`[NARRATION]: ${m.content.slice(0,350)}...`:m.role==='player'?`[PLAYER]: ${m.content}`:'').filter(Boolean).join('\n\n');
+  const srSection=search?`\n=== WEB SEARCH RESULTS (weave naturally, never cite) ===\n${search}\n`:'';
+  const content=`=== WORLD STATE ===\n${JSON.stringify(ws,null,2)}\n\n=== RECENT CONTEXT ===\n${recent}\n${srSection}\n=== PLAYER ACTION ===\n"${action}"\n\nWrite 3-paragraph narration:`;
+  const r=await fetch('https://integrate.api.nvidia.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model:'nvidia/llama-3.3-nemotron-super-49b-v1.5',messages:[{role:'system',content:narratorSys(chronicle.genre,chronicle.customSetting||'')},{role:'user',content}],max_tokens:900,temperature:0.82,stream:true})});
+  if(!r.ok){const e=await r.json();throw new Error(e.error?.message||`NVIDIA error ${r.status}`)}
+  const reader=r.body.getReader(),dec=new TextDecoder();let full='';
+  while(true){const{done,value}=await reader.read();if(done)break;
+    for(const line of dec.decode(value).split('\n')){if(!line.startsWith('data: '))continue;const d=line.slice(6).trim();if(d==='[DONE]')continue;try{const t=JSON.parse(d).choices?.[0]?.delta?.content||'';if(t){full+=t;onChunk(full)}}catch{}}
+  }
+  return full;
+}
+
+async function genOpening(name,genre,setting){
+  const key=gk('nvidia');
+  if(!key)throw new Error('NVIDIA API key missing');
+  const f=FLAVOR[genre]||genre;
+  const r=await fetch('https://integrate.api.nvidia.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model:'nvidia/llama-3.3-nemotron-super-49b-v1.5',messages:[{role:'system',content:narratorSys(genre,setting)},{role:'user',content:`Write the opening 3 paragraphs for an interactive story called "${name}" set in ${f}. ${setting?'Setting: '+setting:''} Place the player at a powerful, memorable opening moment. Make it unforgettable.`}],max_tokens:600,temperature:0.9,stream:false})});
+  if(!r.ok){const e=await r.json();throw new Error(e.error?.message)}
+  return (await r.json()).choices[0].message.content.trim();
+}
+
+// ═══════════════════════════ UI ════════════════════════════
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function appendBubble(role,content){
+  const msgs=document.getElementById('messages');
+  const es=document.getElementById('empty-state');
+  if(es)es.remove();
+  const el=document.createElement('div');
+  el.className=`bubble ${role}`;
+  const labels={narrator:'◆ The Chronicle',player:'▶ Your Action',system:'— system —'};
+  el.innerHTML=`<div class="bubble-label">${labels[role]||role}</div>`;
+  const txt=document.createElement('span');
+  txt.textContent=content;
+  el.appendChild(txt);
+  msgs.appendChild(el);
+  msgs.scrollTop=msgs.scrollHeight;
+  return {el,txt};
+}
+
+function setStatus(s){
+  document.getElementById('status-text').textContent=s;
+  document.getElementById('status-bar').classList.toggle('show',!!s);
+}
+
+function renderWS(ws,turn){
+  document.getElementById('world-empty').style.display='none';
+  const body=document.getElementById('world-body');
+  body.style.display='flex';
+  const hp=ws.health||0,mhp=ws.max_health||100;
+  const pct=Math.max(0,Math.min(100,Math.round(hp/mhp*100)));
+  const hc=pct>60?'#4caf50':pct>30?'#ff9800':'#e53e3e';
+  const inv=(ws.inventory||[]).map(i=>`<span class="inv-tag">${esc(i)}</span>`).join('')||`<span style="color:var(--text-dim);font-size:11px">Nothing</span>`;
+  const quests=(ws.quest_log||[]).map(q=>{const dot=q.startsWith('Completed')?'<span style="color:#4caf50">✓</span>':q.startsWith('Failed')?'<span style="color:#e53e3e">✗</span>':'<span style="color:var(--gold)">◆</span>';return`<div class="quest-item">${dot} ${esc(q)}</div>`}).join('')||`<div style="color:var(--text-dim);font-size:11px">No active quests</div>`;
+  const flags=Object.entries(ws.flags||{}).slice(0,10).map(([k,v])=>`<div class="flag-row"><span class="flag-key">${esc(k.replace(/_/g,' '))}</span><span class="flag-val ${v?'':'off'}">${String(v).toUpperCase()}</span></div>`).join('');
+  body.innerHTML=`
+    <div><div class="ws-label">📍 Location</div><div class="ws-value gold">${esc(ws.location||'Unknown')}</div><div class="ws-sub">${esc(ws.location_description||'')}</div></div>
+    <div class="divider"></div>
+    <div><div class="ws-label">❤ Health (${hp}/${mhp})</div><div class="hp-bar-bg"><div class="hp-bar-fill" style="width:${pct}%;background:${hc}"></div></div></div>
+    <div class="divider"></div>
+    <div style="display:flex;gap:24px"><div><div class="ws-label">💰 Gold</div><div class="ws-value gold">${ws.gold||0} gp</div></div><div><div class="ws-label">🎯 Turn</div><div class="ws-value">${turn}</div></div></div>
+    <div class="divider"></div>
+    <div><div class="ws-label">🎒 Inventory</div><div style="margin-top:5px">${inv}</div></div>
+    <div class="divider"></div>
+    <div><div class="ws-label">📜 Quest Log</div><div style="margin-top:5px">${quests}</div></div>
+    <div class="divider"></div>
+    <div><div class="ws-label">⚡ Last Event</div><div class="ws-sub" style="margin-top:4px">${esc(ws.last_action_summary||'—')}</div></div>
+    ${flags?`<div class="divider"></div><div><div class="ws-label">🏴 World Flags</div><div style="margin-top:5px">${flags}</div></div>`:''}`;
+}
+
+async function refreshSidebar(){
+  const list=document.getElementById('chronicles-list');
+  const all=(await dbAll()).sort((a,b)=>b.updatedAt-a.updatedAt);
+  list.innerHTML='';
+  if(!all.length){list.innerHTML='<div style="padding:16px;color:var(--text-dim);font-size:11px;text-align:center;line-height:2">No chronicles yet.<br>Create one above.</div>';return;}
+  for(const c of all){
+    const el=document.createElement('div');
+    el.className='chronicle-item'+(c.id===activeId?' active':'');
+    el.innerHTML=`<div class="ci-name">${esc(c.name)}</div><div class="ci-meta">${esc(c.genre)} · ${esc(c.worldState?.location||'?')} · T${c.turnCount||0}</div>`;
+    el.onclick=()=>loadChronicle(c.id);
+    list.appendChild(el);
+  }
+}
+
+async function loadChronicle(id){
+  const c=await dbGet(id);if(!c)return;
+  activeId=id;activeChronicle=c;
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('topbar-title').textContent=c.name;
+  document.getElementById('topbar-genre').textContent=c.genre;
+  document.getElementById('delete-btn').disabled=false;
+  document.getElementById('send-btn').disabled=false;
+  document.getElementById('msg-input').disabled=false;
+  const msgs=document.getElementById('messages');
+  msgs.innerHTML='';
+  for(const m of c.messages)appendBubble(m.role,m.content);
+  msgs.scrollTop=msgs.scrollHeight;
+  renderWS(c.worldState,c.turnCount||0);
+  refreshSidebar();
+}
+
+// ═══════════════════════ SEND ══════════════════════════════
+async function sendMessage(){
+  const inp=document.getElementById('msg-input');
+  const text=inp.value.trim();
+  if(!text||busy||!activeChronicle)return;
+  inp.value='';autoResize();busy=true;
+  document.getElementById('send-btn').disabled=true;
+  appendBubble('player',text);
+  activeChronicle.messages.push({role:'player',content:text});
+  document.getElementById('messages').scrollTop=999999;
+  try{
+    setStatus('🔍 Searching for world context...');
+    const sr=await webSearch(activeChronicle.genre,text,activeChronicle.worldState);
+    setStatus('🧠 Gemini updating world state...');
+    const newWS=await callGemini(activeChronicle,text);
+    activeChronicle.worldState=newWS;
+    renderWS(newWS,activeChronicle.turnCount||0);
+    setStatus('✍ NVIDIA Nemotron writing your story...');
+    const {el,txt}=appendBubble('narrator','');
+    const narration=await callNvidia(activeChronicle,newWS,text,sr,p=>{txt.textContent=p;document.getElementById('messages').scrollTop=999999});
+    activeChronicle.messages.push({role:'narrator',content:narration});
+    activeChronicle.turnCount=(activeChronicle.turnCount||0)+1;
+    activeChronicle.updatedAt=Date.now();
+    await dbPut(activeChronicle);
+    refreshSidebar();setStatus('');
+  }catch(e){
+    setStatus('');
+    appendBubble('system',`⚠ Error: ${e.message}`);
+    activeChronicle.messages.pop();
+  }
+  busy=false;
+  document.getElementById('send-btn').disabled=false;
+  document.getElementById('msg-input').focus();
+}
+
+// ═══════════════════════ MODALS ════════════════════════════
+function openApiModal(){document.getElementById('gemini-key-input').value=gk('gemini');document.getElementById('nvidia-key-input').value=gk('nvidia');document.getElementById('api-modal').classList.remove('hidden')}
+function saveApiKeys(){sk('gemini',document.getElementById('gemini-key-input').value.trim());sk('nvidia',document.getElementById('nvidia-key-input').value.trim());closeModal('api-modal')}
+function openNewModal(){document.getElementById('nc-name').value='';document.getElementById('nc-setting').value='';document.getElementById('new-modal').classList.remove('hidden');setTimeout(()=>document.getElementById('nc-name').focus(),100)}
+function closeModal(id){document.getElementById(id).classList.add('hidden')}
+document.querySelectorAll('.modal-bg').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.add('hidden')}));
+
+const DEFAULT_WS={location:'The Beginning',location_description:'Where all stories start.',health:100,max_health:100,gold:0,inventory:[],quest_log:[],flags:{},last_action_summary:'The story begins.',notes:''};
+
+async function createChronicle(){
+  const name=document.getElementById('nc-name').value.trim()||`Chronicle ${new Date().toLocaleDateString('en',{month:'short',day:'numeric'})}`;
+  const genre=document.getElementById('nc-genre').value;
+  const customSetting=document.getElementById('nc-setting').value.trim();
+  if(!gk('gemini')||!gk('nvidia')){closeModal('new-modal');openApiModal();return;}
+  closeModal('new-modal');
+  const id='c'+Date.now().toString(36);
+  const c={id,name,genre,customSetting,messages:[],worldState:{...DEFAULT_WS},turnCount:0,createdAt:Date.now(),updatedAt:Date.now()};
+  await dbPut(c);activeId=id;activeChronicle=c;
+  document.getElementById('topbar-title').textContent=name;
+  document.getElementById('topbar-genre').textContent=genre;
+  document.getElementById('delete-btn').disabled=false;
+  document.getElementById('send-btn').disabled=false;
+  document.getElementById('msg-input').disabled=false;
+  document.getElementById('messages').innerHTML='';
+  document.getElementById('world-body').style.display='none';
+  document.getElementById('world-empty').style.display='flex';
+  refreshSidebar();
+  busy=true;document.getElementById('send-btn').disabled=true;
+  setStatus('✍ NVIDIA Nemotron writing your opening...');
+  try{
+    const{el,txt}=appendBubble('narrator','');
+    let opening;
+    try{
+      opening=await callNvidia(c,c.worldState,`BEGIN STORY: ${name}. Genre: ${genre}. ${customSetting}`,'',(p)=>{txt.textContent=p;document.getElementById('messages').scrollTop=999999});
+    }catch{
+      opening=await genOpening(name,genre,customSetting);txt.textContent=opening;
+    }
+    c.messages.push({role:'narrator',content:opening});
+    c.updatedAt=Date.now();
+    await dbPut(c);renderWS(c.worldState,0);
+  }catch(e){appendBubble('system',`⚠ Opening error: ${e.message}`)}
+  setStatus('');busy=false;document.getElementById('send-btn').disabled=false;
+  document.getElementById('msg-input').focus();
+}
+
+function confirmDelete(){
+  if(!activeChronicle)return;
+  document.getElementById('delete-text').textContent=`"${activeChronicle.name}" will be permanently deleted.`;
+  document.getElementById('delete-modal').classList.remove('hidden');
+}
+
+async function deleteChronicle(){
+  if(!activeId)return;
+  await dbDel(activeId);activeId=null;activeChronicle=null;
+  closeModal('delete-modal');
+  document.getElementById('topbar-title').textContent='Select or create a Chronicle';
+  document.getElementById('topbar-genre').textContent='';
+  document.getElementById('delete-btn').disabled=true;
+  document.getElementById('send-btn').disabled=true;
+  document.getElementById('msg-input').disabled=true;
+  document.getElementById('messages').innerHTML='<div id="empty-state" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--text-dim)"><div style="font-family:var(--serif);font-size:36px;color:var(--gold)">Chronicles</div><p style="font-size:11px;letter-spacing:.15em">← Create a new chronicle</p></div>';
+  document.getElementById('world-body').style.display='none';
+  document.getElementById('world-empty').style.display='flex';
+  refreshSidebar();
+}
+
+function autoResize(){const el=document.getElementById('msg-input');el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px'}
+document.getElementById('msg-input').addEventListener('input',autoResize);
+document.getElementById('msg-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}});
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+async function init(){
+  await openDB();
+  await refreshSidebar();
+  if(!gk('gemini')||!gk('nvidia'))setTimeout(openApiModal,400);
+}
+init();
+</script>
+</body>
+</html>
